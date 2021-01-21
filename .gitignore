@@ -1,0 +1,11 @@
+yarn.lock
+node_modules/
+build/
+flatten
+
+.DS_Store
+.config.js
+report.*.json
+yarn-error.log
+.config*
+package-lock.json
