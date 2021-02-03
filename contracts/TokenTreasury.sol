@@ -31,7 +31,8 @@ contract TokenTreasury is Paramable, ReentrancyGuard{
         isWhiteListed[_user] = _value;
     }
 
-    function claim(address _token, uint _amount) external {
+    function claim(address _token, uint _amount) external payable {
+        require(isWhiteListed[msg.sender], "TokenTreasury: sender is not in whitelist");
         uint256 balance;
         if (_token == address(0)) {
             balance = address(this).balance;
@@ -39,16 +40,16 @@ contract TokenTreasury is Paramable, ReentrancyGuard{
             balance = IERC20(_token).balanceOf(address(this));
         }
         require(_amount <= balance, 'TokenTreasury: insufficient balance');
-        _transfer(_token,  _amount, msg.sender);
+        if(_token == address(0)) {
+            msg.sender.transfer(_amount);
+        } else {
+            IERC20(_token).safeTransfer(msg.sender, _amount);
+        }
     }
 
     function transfer(address _token, uint256 _amount, address _to) external onlyOwner {
-        _transfer(_token,  _amount, _to);
-    }
-
-    function _transfer(address _token, uint256 _amount, address _to) internal {
         require(isWhiteListed[_to], "TokenTreasury: sender is not in whitelist");
-        if (_token == address(0)) {
+        if(_token == address(0)) {
             safeTransferETH(_to, _amount);
         } else {
             IERC20(_token).safeTransfer(_to, _amount);
@@ -60,14 +61,26 @@ contract TokenTreasury is Paramable, ReentrancyGuard{
         return true;
     }
 
-    function depositeETH() external payable {
-        emit DepositedETH(msg.sender, msg.value);
+    function deposite(address _token, uint256 _amount) external payable {
+        if(_token != address(0)) {
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        } else {
+            _amount = msg.value;
+        }
+        emit Deposited(msg.sender, _token, _amount);
+    }
+
+    function depositeETH() public payable {
+        emit Deposited(msg.sender, address(0), msg.value);
     }
 
     function safeTransferETH(address to, uint amount) internal {
         address(uint160(to)).transfer(amount);
     }
 
+    function () external payable {
+    }
+
     event ChangedWhiteList(address indexed _user, bool _old, bool _new);
-    event DepositedETH(address indexed _user, uint256 _amount);
+    event Deposited(address indexed _user, address indexed _token, uint256 _amount);
 }

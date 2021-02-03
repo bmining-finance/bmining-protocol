@@ -7,6 +7,8 @@ const MockUniswapPair = require("../build/MockUniswapPair.json")
 const BminingToken = require("../build/BminingToken.json")
 const BTCParam = require("../build/BTCParam.json")
 const BTCParamV2 = require("../build/BTCParamV2.json")
+const MineParam = require("../build/MineParam.json")
+const MineParamSetter = require("../build/MineParamSetter.json")
 const POWLpStaking = require("../build/POWLpStaking.json")
 const POWToken = require("../build/POWToken.json")
 const POWStaking = require("../build/POWStaking.json")
@@ -20,19 +22,27 @@ const UniswapV2Router02 = require("../thirdabis/UniswapV2Router02.json")
 let tokens = {
   USDT: '',
   WBTC: '',
+  WETH: '',
 }
 
 let Contracts = {
     BminingToken: BminingToken,
     BTCParam: BTCParam,
-    BTCParamV2: BTCParamV2,
+    MineParam: MineParam,
+    MineParamETH: MineParam,
+    MineParamSetter: MineParamSetter,
     POWToken: POWToken,
+    POWTokenETH: POWToken,
     POWStaking: POWStaking,
+    POWStakingETH: POWStaking,
     POWLpStaking: POWLpStaking,
+    POWLpStakingETH: POWLpStaking,
     POWLpStaking2: POWLpStaking,
+    POWLpStaking2ETH: POWLpStaking,
     StakingPool: StakingPool,
     TokenTreasury: TokenTreasury,
     TokenExchange: TokenExchange,
+    TokenExchangeETH: TokenExchange,
     Query: Query,
 }
 
@@ -40,8 +50,10 @@ let ContractAddress = {}
 
 let lps = {
     BMT_USDT_LP: '',
-    BBTC50_USDT_LP: '',
+    bBTC50_USDT_LP: '',
+    bETH30_USDT_LP: '',
     WBTC_USDT_LP: '',
+    WETH_USDT_LP: '',
 }
 
 let config = {
@@ -65,13 +77,19 @@ let ETHER_SEND_CONFIG = {
     gasPrice: ethers.utils.parseUnits(config.gasPrice, "gwei")
 }
   
-
-console.log("current endpoint ", config.url)
-let provider = new ethers.providers.JsonRpcProvider(config.url)
-let walletWithProvider = new ethers.Wallet(config.pk, provider)
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
+console.log("current endpoint ", config.url);
+let provider = new ethers.providers.JsonRpcProvider(config.url);
+let walletWithProvider = new ethers.Wallet(config.pk, provider);
 let owner = walletWithProvider.address;
 console.log('owner:', owner);
 
+function sendParam(value='0') {
+  return {
+    value: value,
+    gasPrice: ethers.utils.parseUnits(config.gasPrice, "gwei")
+  }
+}
 
 function getWallet(key = config.pk) {
   return new ethers.Wallet(key, provider)
@@ -154,6 +172,7 @@ async function initLP() {
   Object.assign(_tokens, tokens);
   _tokens['BminingToken'] = ContractAddress['BminingToken']
   _tokens['POWToken'] = ContractAddress['POWToken']
+  _tokens['POWTokenETH'] = ContractAddress['POWTokenETH']
   for (let k in _tokens) {
     ins = new ethers.Contract(
       _tokens[k],
@@ -214,7 +233,22 @@ async function initLP() {
     lps.WBTC_USDT_LP = await factoryIns.getPair(tokens['WBTC'], tokens['USDT'])
     console.log('WBTC_USDT_LP:', lps.WBTC_USDT_LP)
 
-    console.log('init BBTC50_USDT_LP...', ContractAddress['POWToken'], tokens['USDT'])
+    // console.log('init WETH_USDT_LP...', tokens['WETH'], tokens['USDT'])
+    // tx = await routerIns.addLiquidityETH(
+    //   tokens['USDT'],
+    //   '100000000',
+    //   '1',
+    //   '1',
+    //   owner,
+    //   deadline,
+    //   sendParam('100000000000000000')
+    // )
+    // await waitForMint(tx.hash)
+
+    lps.WETH_USDT_LP = await factoryIns.getPair(tokens['WETH'], tokens['USDT'])
+    console.log('WETH_USDT_LP:', lps.WETH_USDT_LP)
+
+    console.log('init bBTC50_USDT_LP...', ContractAddress['POWToken'], tokens['USDT'])
     tx = await routerIns.addLiquidity(
       ContractAddress['POWToken'],
       tokens['USDT'],
@@ -228,7 +262,25 @@ async function initLP() {
     )
     await waitForMint(tx.hash)
 
-    lps.BBTC50_USDT_LP = await factoryIns.getPair(ContractAddress['POWToken'], tokens['USDT'])
+    lps.bBTC50_USDT_LP = await factoryIns.getPair(ContractAddress['POWToken'], tokens['USDT'])
+    console.log('bBTC50_USDT_LP:', lps.bBTC50_USDT_LP)
+
+    console.log('init bETH30_USDT_LP...', ContractAddress['POWTokenETH'], tokens['USDT'])
+    tx = await routerIns.addLiquidity(
+      ContractAddress['POWTokenETH'],
+      tokens['USDT'],
+      '1000000000000000000',
+      '50000000',
+      '1',
+      '1',
+      owner,
+      deadline,
+      ETHER_SEND_CONFIG
+    )
+    await waitForMint(tx.hash)
+
+    lps.bETH30_USDT_LP = await factoryIns.getPair(ContractAddress['POWTokenETH'], tokens['USDT'])
+    console.log('bETH30_USDT_LP:', lps.bETH30_USDT_LP)
 }
 
 async function initExchange() {
@@ -263,6 +315,38 @@ async function initExchange() {
 
 }
 
+async function initExchangeETH() {
+                  
+  console.log('TokenExchangeETH init...')
+  ins = new ethers.Contract(
+      ContractAddress['TokenExchangeETH'],
+      TokenExchange.abi,
+      getWallet()
+    )
+
+  tx = await ins.initialize(
+      ContractAddress['POWTokenETH'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  tx = await ins.setExchangeRate(
+      tokens['USDT'],
+      50000,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  console.log('TokenExchangeETH ownerMint...')
+  tx = await ins.ownerMint(
+      '10000000000000000000',
+      owner,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+}
+
 async function initLpStaking() {
   console.log('POWLpStaking init...')
   ins = new ethers.Contract(
@@ -273,7 +357,7 @@ async function initLpStaking() {
 
   tx = await ins.initialize(
       ContractAddress['POWToken'],
-      lps.BBTC50_USDT_LP,
+      lps.bBTC50_USDT_LP,
       ETHER_SEND_CONFIG
   )
   await waitForMint(tx.hash)
@@ -314,19 +398,50 @@ async function initLpStaking() {
   await waitForMint(tx.hash)
 }
 
-async function initBTCParamV2() {
-  console.log('BTCParamV2 init...')
+async function initLpStakingETH() {
+  console.log('POWLpStakingETH init...')
   ins = new ethers.Contract(
-      ContractAddress['BTCParamV2'],
-      BTCParamV2.abi,
+      ContractAddress['POWLpStakingETH'],
+      POWLpStaking.abi,
       getWallet()
     )
 
   tx = await ins.initialize(
-      '20607418304385',
-      '6250000000000000000',
+      ContractAddress['POWTokenETH'],
+      lps.bETH30_USDT_LP,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+   
+  console.log('POWLpStaking2ETH init...')
+  ins = new ethers.Contract(
+      ContractAddress['POWLpStaking2ETH'],
+      POWLpStaking.abi,
+      getWallet()
+    )
+
+  tx = await ins.initialize(
+      ContractAddress['POWTokenETH'],
+      lps.BMT_USDT_LP,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+}
+
+async function initMineParam() {
+  console.log('MineParam init...')
+  ins = new ethers.Contract(
+      ContractAddress['MineParam'],
+      MineParam.abi,
+      getWallet()
+    )
+
+  tx = await ins.initialize(
+      '79112636',
       lps.WBTC_USDT_LP,
-      true,
+      tokens['WBTC'],
+      ContractAddress['MineParamSetter'],
       ETHER_SEND_CONFIG
   )
   await waitForMint(tx.hash)
@@ -337,6 +452,85 @@ async function initBTCParamV2() {
   )
   await waitForMint(tx.hash)
       
+  tx = await ins.setIncomePerTPerSecInWeiAndUpdateMinePrice(
+      '79112636',
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  tx = await ins.setParamSetter(
+      ContractAddress['MineParamSetter'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+}
+
+async function initMineParamETH() {
+  console.log('MineParamETH init...')
+  ins = new ethers.Contract(
+      ContractAddress['MineParamETH'],
+      MineParam.abi,
+      getWallet()
+    )
+
+  tx = await ins.initialize(
+      '2065972222',
+      lps.WETH_USDT_LP,
+      tokens['WETH'],
+      ContractAddress['MineParamSetter'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  tx = await ins.addListener(
+      ContractAddress['POWTokenETH'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+      
+  tx = await ins.setIncomePerTPerSecInWeiAndUpdateMinePrice(
+      '2065972222',
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  tx = await ins.setParamSetter(
+      ContractAddress['MineParamSetter'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+}
+
+async function setMineParam() {
+  console.log('POWToken setMineParam')
+  ins = new ethers.Contract(
+    ContractAddress['POWToken'],
+    POWToken.abi,
+    getWallet()
+  )
+
+  tx = await ins.setMineParam(
+      ContractAddress['MineParam'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+}
+
+async function setMineParamETH() {
+  console.log('POWTokenETH setMineParam')
+  ins = new ethers.Contract(
+    ContractAddress['POWTokenETH'],
+    POWToken.abi,
+    getWallet()
+  )
+
+  tx = await ins.setMineParam(
+      ContractAddress['MineParamETH'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
 }
 
 async function setStakingParam() {
@@ -351,7 +545,7 @@ async function setStakingParam() {
       [ContractAddress['POWStaking'],
       ContractAddress['POWLpStaking'],
       ContractAddress['POWLpStaking2']],
-      [20,30,50],
+      [1,5,5],
       ETHER_SEND_CONFIG
   )
   await waitForMint(tx.hash)
@@ -368,7 +562,43 @@ async function setStakingParam() {
 
   console.log('POWToken setRewardRate...')
   tx = await ins.setRewardRate(
-      '1000000000000000000',
+      '7000000000000000000',
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+  
+}
+
+async function setStakingParamETH() {
+  console.log('setStakingParamETH init...')
+    ins = new ethers.Contract(
+      ContractAddress['POWTokenETH'],
+      POWToken.abi,
+      getWallet()
+    )
+  console.log('POWTokenETH setStakingRewardWeights...')
+  tx = await ins.setStakingRewardWeights(
+      [ContractAddress['POWStakingETH'],
+      ContractAddress['POWLpStakingETH'],
+      ContractAddress['POWLpStaking2ETH']],
+      [20,30,50],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+  
+  tx = await ins.setLpStakingIncomeWeights(
+    [
+      ContractAddress['POWLpStakingETH'],
+      ContractAddress['POWLpStaking2ETH']
+    ],
+      [80,20],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  console.log('POWTokenETH setRewardRate...')
+  tx = await ins.setRewardRate(
+      '3000000000000000000',
       ETHER_SEND_CONFIG
   )
   await waitForMint(tx.hash)
@@ -430,6 +660,21 @@ async  function initPOWStaking() {
   await waitForMint(tx.hash)
 }
 
+async  function initPOWStakingETH() {
+  console.log('POWStakingETH init...')
+  ins = new ethers.Contract(
+      ContractAddress['POWStakingETH'],
+      POWStaking.abi,
+      getWallet()
+    )
+
+  tx = await ins.initialize(
+      ContractAddress['POWTokenETH'],
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+}
+
 async function initPOWToken() {          
   console.log('POWToken init...')
   ins = new ethers.Contract(
@@ -438,27 +683,54 @@ async function initPOWToken() {
     getWallet()
   )
 
-  // ContractAddress['POWLpStaking'],
-  // ContractAddress['POWLpStaking2'],
   tx = await ins.initialize(
       'BMining POW BTC-50W',
-      'BBTC50',
+      'bBTC50',
       ContractAddress['POWStaking'],
       ContractAddress['POWLpStaking'],
       ContractAddress['POWLpStaking2'],
       ContractAddress['TokenExchange'],
-      ContractAddress['BTCParam'],
+      ContractAddress['MineParam'],
       tokens['WBTC'],
       ContractAddress['BminingToken'],
       ContractAddress['TokenTreasury'],
-      35000,
-      58300,
+      50000,
+      56000,
       25000,
       100000,
       ETHER_SEND_CONFIG
   )
   await waitForMint(tx.hash)
 }
+
+async function initPOWTokenETH() {          
+  console.log('POWTokenETH init...')
+  ins = new ethers.Contract(
+    ContractAddress['POWTokenETH'],
+    POWToken.abi,
+    getWallet()
+  )
+
+  tx = await ins.initialize(
+      'BMining POW ETH-30W',
+      'bETH30',
+      ContractAddress['POWStakingETH'],
+      ContractAddress['POWLpStakingETH'],
+      ContractAddress['POWLpStaking2ETH'],
+      ContractAddress['TokenExchangeETH'],
+      ContractAddress['MineParamETH'],
+      ZERO_ADDR,
+      ContractAddress['BminingToken'],
+      ContractAddress['TokenTreasury'],
+      30000,
+      60000,
+      50000,
+      100000,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+}
+
 
 async function initTokenTreasury() {
   console.log('TokenTreasury init...')
@@ -468,10 +740,15 @@ async function initTokenTreasury() {
       getWallet()
     )
 
-  tx = await ins.setWhiteList(
-      ContractAddress['POWToken'],
-      true,
+  tx = await ins.setWhiteLists(
+      [ContractAddress['POWToken'],ContractAddress['POWTokenETH']],
+      [true, true],
       ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+
+  tx = await ins.depositeETH(
+    sendParam('100000000000000000')
   )
   await waitForMint(tx.hash)
 
@@ -484,16 +761,44 @@ async function initTokenTreasury() {
   await waitForMint(tx.hash)
 }
 
+async function initMineParamSetter() {
+  console.log('MineParamSetter init...')
+  ins = new ethers.Contract(
+      ContractAddress['MineParamSetter'],
+      MineParamSetter.abi,
+      getWallet()
+    )
+
+  tx = await ins.setRate(
+      100,
+      1000,
+      100,
+      2000,
+      ETHER_SEND_CONFIG
+  )
+  await waitForMint(tx.hash)
+}
+
 async function initialize() {
     await initBminingToken()
-    await initBTCParam()
-    await initPOWStaking()
+    // await initBTCParam()
     await initPOWToken()
+    await initPOWTokenETH()
+    await initPOWStaking()
+    await initPOWStakingETH()
     await initExchange();
+    await initExchangeETH();
     await initLP();
-    await initBTCParamV2();
+    await initMineParam();
+    await initMineParamETH();
+    await initMineParamSetter();
     await initLpStaking();
+    await initLpStakingETH();
     await setStakingParam();
+    await setStakingParamETH();
+    // await setMineParam();
+    // await setMineParamETH();
+    await initTokenTreasury();
 }
 
 async function transfer() {
@@ -506,6 +811,8 @@ async function transfer() {
             value = '5000000000';
         } else if(k === 'WBTC') {
             value = '500000000000';
+        } else if(k === 'WETH') {
+          continue;
         }
         ins = new ethers.Contract(
             tokens[k],
@@ -536,7 +843,8 @@ function writeDeployInfo() {
     abis['TokenExchange'] = TokenExchange.abi;
     abis['UniswapPair'] = MockUniswapPair.abi;
     abis['BTCParam'] = BTCParam.abi;
-    abis['BTCParamV2'] = BTCParamV2.abi;
+    abis['MineParam'] = MineParam.abi;
+    abis['MineParamSetter'] = MineParamSetter.abi;
     abis['Query'] = Query.abi;
 
 

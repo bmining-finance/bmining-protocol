@@ -22,4 +22,5 @@ interface IPOWToken {
     function getStakingRewardRate(address _pool) external view returns(uint256);
     function getLpStakingSupply(address _pool) external view returns(uint256);
     function isStakingPool(address _pool) external view  returns (bool);
+    function minter() external view returns(address);
 }

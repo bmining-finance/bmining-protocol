@@ -246,4 +246,8 @@ contract BminingToken is ERC20, ERC20Detailed("BMiningToken", "BMT", 18), Ownabl
         assembly { chainId := chainid() }
         return chainId;
     }
+
+    function burn(uint256 amount) external {
+        _burn(msg.sender, amount);
+    }
 }

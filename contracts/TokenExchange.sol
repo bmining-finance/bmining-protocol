@@ -12,7 +12,7 @@ contract TokenExchange is Paramable, ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    bool internal initialized;
+    bool private initialized;
     uint256 public constant exchangeRateAmplifier = 1000;
     address public hashRateToken;
     address[] public exchangeTokens;
@@ -20,10 +20,10 @@ contract TokenExchange is Paramable, ReentrancyGuard{
     mapping (address => bool) public isWhiteListed;
 
     function initialize(address _hashRateToken) public {
-        require(!initialized, "Token already initialized");
+        require(!initialized, "already initialized");
+        require(IPOWToken(_hashRateToken).minter() == address(this), 'invalid hashRateToken');
         super.initialize();
         initialized = true;
-
         hashRateToken = _hashRateToken;
     }
 

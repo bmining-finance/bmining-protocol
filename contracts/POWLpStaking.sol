@@ -36,6 +36,7 @@ contract POWLpStaking is Ownable, ReentrancyGuard{
 
     function initialize(address _hashRateToken, address _stakingLpToken) public {
         require(!initialized, "already initialized");
+        require(IPOWToken(_hashRateToken).isStakingPool(address(this)), 'invalid pool');
         super.initialize();
         initialized = true;
         stakingLpToken = _stakingLpToken;

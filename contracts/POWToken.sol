@@ -469,7 +469,7 @@ contract POWToken is Paramable, POWERC20 {
         }
     }
 
-    function claimIncome(address to, uint256 amount) external {
+    function claimIncome(address to, uint256 amount) external payable {
         require(to != address(0), "to is the zero address");
         require(isStakingPool(msg.sender), "No permissions");
         
@@ -508,6 +508,9 @@ contract POWToken is Paramable, POWERC20 {
 
     function safeTransferETH(address to, uint amount) internal {
         address(uint160(to)).transfer(amount);
+    }
+        
+    function () external payable {
     }
 
     event IncomeRateChanged(uint256 oldValue, uint256 newValue);
